@@ -50,14 +50,15 @@ function doPost(e) {
     }
 
     const sheet = getSheet_();
-    const values = sheet.getDataRange().getValues();
 
-    // Server-side duplicate check — never trust the frontend.
-    for (let i = 1; i < values.length; i++) {
-      if (String(values[i][COL_EMAIL]).toLowerCase() === String(data.email).toLowerCase()) {
-        const previousVoteId = values[i][COL_CANDIDATE_ID];
-        return jsonResponse({ success: false, message: 'Already Voted', candidateId: previousVoteId });
-      }
+    // Server-side duplicate check — Fast TextFinder approach for 10k users
+    const emailCol = sheet.getRange(1, COL_EMAIL + 1, Math.max(1, sheet.getLastRow()), 1);
+    const textFinder = emailCol.createTextFinder(data.email).matchEntireCell(true).matchCase(false);
+    const match = textFinder.findNext();
+    
+    if (match && match.getRow() > 1) {
+      const previousVoteId = sheet.getRange(match.getRow(), COL_CANDIDATE_ID + 1).getValue();
+      return jsonResponse({ success: false, message: 'Already Voted', candidateId: previousVoteId });
     }
 
     sheet.appendRow([
@@ -120,14 +121,15 @@ function handleVoteGet_(data) {
     }
 
     const sheet = getSheet_();
-    const values = sheet.getDataRange().getValues();
 
-    // Server-side duplicate check — never trust the frontend.
-    for (let i = 1; i < values.length; i++) {
-      if (String(values[i][COL_EMAIL]).toLowerCase() === String(data.email).toLowerCase()) {
-        const previousVoteId = values[i][COL_CANDIDATE_ID];
-        return jsonResponse({ success: false, message: 'Already Voted', candidateId: previousVoteId });
-      }
+    // Server-side duplicate check — Fast TextFinder approach for 10k users
+    const emailCol = sheet.getRange(1, COL_EMAIL + 1, Math.max(1, sheet.getLastRow()), 1);
+    const textFinder = emailCol.createTextFinder(data.email).matchEntireCell(true).matchCase(false);
+    const match = textFinder.findNext();
+    
+    if (match && match.getRow() > 1) {
+      const previousVoteId = sheet.getRange(match.getRow(), COL_CANDIDATE_ID + 1).getValue();
+      return jsonResponse({ success: false, message: 'Already Voted', candidateId: previousVoteId });
     }
 
     sheet.appendRow([
@@ -148,6 +150,14 @@ function handleVoteGet_(data) {
 }
 
 function getResults_() {
+  const cache = CacheService.getScriptCache();
+  const cached = cache.get('LIVE_RESULTS');
+  if (cached) {
+    try {
+      return JSON.parse(cached);
+    } catch(e) {}
+  }
+
   const sheet = getSheet_();
   const values = sheet.getDataRange().getValues();
 
@@ -174,18 +184,29 @@ function getResults_() {
     };
   });
 
-  return { totalVotes, candidates, votingStatus: status };
+  const result = { totalVotes, candidates, votingStatus: status };
+  
+  try {
+    // Cache for 15 seconds to handle 10k users smoothly and prevent Apps Script quotas
+    cache.put('LIVE_RESULTS', JSON.stringify(result), 15);
+  } catch(e) {}
+
+  return result;
 }
 
 function checkVote_(email) {
   if (!email) return { voted: false };
   const sheet = getSheet_();
-  const values = sheet.getDataRange().getValues();
-  for (let i = 1; i < values.length; i++) {
-    if (String(values[i][COL_EMAIL]).toLowerCase() === String(email).toLowerCase()) {
-      return { voted: true, candidateId: values[i][COL_CANDIDATE_ID] };
-    }
+  
+  const emailCol = sheet.getRange(1, COL_EMAIL + 1, Math.max(1, sheet.getLastRow()), 1);
+  const textFinder = emailCol.createTextFinder(email).matchEntireCell(true).matchCase(false);
+  const match = textFinder.findNext();
+  
+  if (match && match.getRow() > 1) {
+    const previousVoteId = sheet.getRange(match.getRow(), COL_CANDIDATE_ID + 1).getValue();
+    return { voted: true, candidateId: previousVoteId };
   }
+  
   return { voted: false };
 }
 

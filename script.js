@@ -181,7 +181,12 @@ function updateResults(data) {
 function startPolling() {
   fetchResults();
   if (pollTimer) clearInterval(pollTimer);
-  pollTimer = setInterval(fetchResults, CONFIG.REFRESH_INTERVAL_MS || 5000);
+  
+  // Add random jitter (0-5s) to the interval so that thousands of clients 
+  // don't hit the server at the exact same millisecond.
+  const baseInterval = CONFIG.REFRESH_INTERVAL_MS || 15000;
+  const jitter = Math.floor(Math.random() * 5000); 
+  pollTimer = setInterval(fetchResults, baseInterval + jitter);
 }
 
 /* ---------------------------------------------------------
@@ -344,7 +349,8 @@ async function submitVote(candidateId, candidateName) {
         color: '#f4d976',
         confirmButtonColor: '#d4af37'
       });
-      fetchResults();
+      // Do not fetch immediately to prevent the cached server data from reverting the optimistic UI update
+      // fetchResults(); 
     } else {
       if (resData.message === 'Voting is closed') {
         isVotingClosed = true;
@@ -360,7 +366,7 @@ async function submitVote(candidateId, candidateName) {
           color: '#f4d976',
           confirmButtonColor: '#d4af37'
         });
-        fetchResults(); // Re-fetch to sync actual backend state
+        // fetchResults(); // No need to fetch immediately
       } else if (resData.message === 'Already Voted') {
         const previousVote = resData.candidateId || '1';
         localStorage.setItem(localVoteKey(), previousVote);

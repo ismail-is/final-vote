@@ -24,10 +24,11 @@ const CONFIG = {
   // 2) Paste the URL you get after deploying the Apps Script as a
   //    Web App (Deploy > New deployment > Web app). It looks like:
   //    https://script.google.com/macros/s/XXXXXXXXXXXX/exec
-  APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbwSgpHjyvsjeBxWzC3O_hxIf0Y7gTGP7fwZGCGxKOF4mheKHlA9aSX_nD7WhIQA_7nDxA/exec",
+  APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbx6kCK41Oa7JDmWc2pALT6bzHeY5U1dis7N01Iy4MyFchUKD6iERGc07T3W6PI59ZYaJA/exec",
 
   // 3) How often (ms) the live results are refreshed.
-  REFRESH_INTERVAL_MS: 5000,
+  // Increased to 15 seconds to support up to 10k concurrent users smoothly
+  REFRESH_INTERVAL_MS: 15000,
 
   // 4) Candidates. "id" must match what you store in the sheet.
   //    "image" can be any public image URL or a local path.
