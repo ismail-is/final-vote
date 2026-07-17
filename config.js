@@ -35,18 +35,18 @@ const CONFIG = {
   CANDIDATES: [
     {
       id: "C1",
-      name: "مشاركة سيف فهد الحازمي",
-      image: "allimg/v1.jpeg"
+      name: "المشارك سعود ذعار السهلي",
+      image: "allimg/1.jpeg"
     },
     {
       id: "C2",
-      name: "مشاركة مسلم العتيبي",
-      image: "allimg/v2.jpeg"
+      name: "المشارك مبارك ملفي بن عزاره الحربي",
+      image: "allimg/2.jpeg"
     },
     {
       id: "C3",
-      name: "مشاركة ناجح عوض العنزي ",
-      image: "allimg/v3.jpeg"
+      name: "المشارك ناصر جمعان بن لحيان العازمي ",
+      image: "allimg/3.jpeg"
     }
   ]
 };
