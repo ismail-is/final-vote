@@ -205,7 +205,7 @@ function getDeviceId() {
    5. VOTING
    --------------------------------------------------------- */
 function localVoteKey() {
-  return `voted_status`;
+  return `voted_statusseason1`;
 }
 
 function checkLocalVoteFlag() {
