@@ -193,10 +193,10 @@ function startPolling() {
    4. DEVICE IDENTITY (LOCAL STORAGE)
    --------------------------------------------------------- */
 function getDeviceId() {
-  let id = localStorage.getItem('live_vote_device_id');
+  let id = localStorage.getItem('live_vote_device_idseason1');
   if (!id) {
     id = 'device_' + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
-    localStorage.setItem('live_vote_device_id', id);
+    localStorage.setItem('live_vote_device_idseason1', id);
   }
   return id;
 }
