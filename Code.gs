@@ -158,18 +158,28 @@ function getResults_() {
     } catch(e) {}
   }
 
-  const sheet = getSheet_();
-  const values = sheet.getDataRange().getValues();
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let summarySheet = ss.getSheetByName('Summary_Live_Vote');
+  if (!summarySheet) {
+    summarySheet = ss.insertSheet('Summary_Live_Vote');
+    // E = Candidate ID, D = Candidate Name
+    summarySheet.getRange('A1').setFormula('=QUERY(Votes!A:E, "SELECT E, D, COUNT(A) WHERE E IS NOT NULL AND E != \'Candidate ID\' GROUP BY E, D LABEL E \'Candidate ID\', D \'Candidate Name\', COUNT(A) \'Votes\'", 0)');
+    SpreadsheetApp.flush(); // Ensure formula calculates
+  }
 
-  const counts = {};   // candidateId -> vote count
-  const names = {};     // candidateId -> candidate name
+  const values = summarySheet.getDataRange().getValues();
 
-  for (let i = 1; i < values.length; i++) {
+  const counts = {};
+  const names = {};
+
+  for (let i = 0; i < values.length; i++) {
     const row = values[i];
-    const cid = row[COL_CANDIDATE_ID];
-    if (!cid) continue;
-    counts[cid] = (counts[cid] || 0) + 1;
-    names[cid] = row[COL_CANDIDATE_NAME];
+    const cid = String(row[0]);
+    // Skip empty, headers, or #N/A (if QUERY returns no data)
+    if (!cid || cid === 'Candidate ID' || cid === '#N/A') continue;
+    
+    names[cid] = String(row[1]);
+    counts[cid] = Number(row[2]) || 0;
   }
 
   const totalVotes = Object.values(counts).reduce((a, b) => a + b, 0);
@@ -187,7 +197,7 @@ function getResults_() {
   const result = { totalVotes, candidates, votingStatus: status };
   
   try {
-    // Cache for 15 seconds to handle 10k users smoothly and prevent Apps Script quotas
+    // Cache for 15 seconds to handle massive traffic smoothly
     cache.put('LIVE_RESULTS', JSON.stringify(result), 15);
   } catch(e) {}
 
