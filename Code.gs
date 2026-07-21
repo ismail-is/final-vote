@@ -69,6 +69,8 @@ function doPost(e) {
       data.candidateId
     ]);
 
+    incrementCount_(data.candidateId, data.candidateName);
+
     return jsonResponse({ success: true, message: 'Vote Submitted Successfully' });
 
   } catch (err) {
@@ -140,6 +142,8 @@ function handleVoteGet_(data) {
       data.candidateId
     ]);
 
+    incrementCount_(data.candidateId, data.candidateName);
+
     return jsonResponse({ success: true, message: 'Vote Submitted Successfully' });
 
   } catch (err) {
@@ -162,9 +166,14 @@ function getResults_() {
   let summarySheet = ss.getSheetByName('Summary_Live_Vote');
   if (!summarySheet) {
     summarySheet = ss.insertSheet('Summary_Live_Vote');
-    // E = Candidate ID, D = Candidate Name
-    summarySheet.getRange('A1').setFormula('=QUERY(Votes!A:E, "SELECT E, D, COUNT(A) WHERE E IS NOT NULL AND E != \'Candidate ID\' GROUP BY E, D LABEL E \'Candidate ID\', D \'Candidate Name\', COUNT(A) \'Votes\'", 0)');
-    SpreadsheetApp.flush(); // Ensure formula calculates
+    summarySheet.appendRow(['Candidate ID', 'Candidate Name', 'Votes']);
+  } else {
+    // If it still has the old QUERY formula, convert it to static values
+    const a1Formula = summarySheet.getRange('A1').getFormula();
+    if (a1Formula) {
+      const range = summarySheet.getDataRange();
+      range.setValues(range.getValues());
+    }
   }
 
   const values = summarySheet.getDataRange().getValues();
@@ -176,7 +185,7 @@ function getResults_() {
     const row = values[i];
     const cid = String(row[0]);
     // Skip empty, headers, or #N/A (if QUERY returns no data)
-    if (!cid || cid === 'Candidate ID' || cid === '#N/A') continue;
+    if (!cid || cid === 'Candidate ID' || cid === 'Candidate Name' || cid === '#N/A') continue;
     
     names[cid] = String(row[1]);
     counts[cid] = Number(row[2]) || 0;
@@ -246,4 +255,38 @@ function getPassword_() {
   }
   const data = sheet.getDataRange().getValues();
   return data.length > 1 ? String(data[1][0]) : '1234';
+}
+
+function incrementCount_(candidateId, candidateName) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let summarySheet = ss.getSheetByName('Summary_Live_Vote');
+  
+  if (!summarySheet) {
+    summarySheet = ss.insertSheet('Summary_Live_Vote');
+    summarySheet.appendRow(['Candidate ID', 'Candidate Name', 'Votes']);
+  }
+  
+  // If it still has a formula (from the old version), convert to static values
+  const a1Formula = summarySheet.getRange('A1').getFormula();
+  if (a1Formula) {
+    const range = summarySheet.getDataRange();
+    range.setValues(range.getValues());
+  }
+
+  const range = summarySheet.getDataRange();
+  const values = range.getValues();
+  let found = false;
+  
+  for (let i = 0; i < values.length; i++) {
+    if (String(values[i][0]) === String(candidateId)) {
+      const newCount = (Number(values[i][2]) || 0) + 1;
+      summarySheet.getRange(i + 1, 3).setValue(newCount);
+      found = true;
+      break;
+    }
+  }
+  
+  if (!found) {
+    summarySheet.appendRow([candidateId, candidateName, 1]);
+  }
 }
