@@ -313,8 +313,14 @@ function handleVoteClick(event, candidateId, candidateName) {
 }
 
 async function submitVote(candidateId, candidateName) {
+  if (hasVoted) return; // Prevent multiple clicks immediately
+  hasVoted = true; 
+
   const buttons = document.querySelectorAll('[data-role="vote-btn"]');
-  buttons.forEach(b => b.disabled = true);
+  buttons.forEach(b => {
+    b.disabled = true;
+    b.innerHTML = '<span>⏳</span> جاري التصويت...'; // "Voting in progress..."
+  });
 
   // Optimistic UI Update for instant feedback
   if (liveData && liveData[candidateId]) {
@@ -389,7 +395,11 @@ async function submitVote(candidateId, candidateName) {
           confirmButtonColor: '#d4af37'
         });
       } else {
-        buttons.forEach(b => b.disabled = false);
+        hasVoted = false;
+        buttons.forEach(b => {
+          b.disabled = false;
+          b.innerHTML = '<span>✅</span> صوّت الآن';
+        });
         Swal.fire({
           icon: 'error',
           title: 'Error',
@@ -402,7 +412,11 @@ async function submitVote(candidateId, candidateName) {
     }
   } catch (err) {
     console.error('Submit Vote Error:', err);
-    buttons.forEach(b => b.disabled = false);
+    hasVoted = false;
+    buttons.forEach(b => {
+      b.disabled = false;
+      b.innerHTML = '<span>✅</span> صوّت الآن';
+    });
     Swal.fire({
       icon: 'error',
       title: 'Connection Error',
