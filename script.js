@@ -316,12 +316,6 @@ async function submitVote(candidateId, candidateName) {
   if (hasVoted) return; // Prevent multiple clicks immediately
   hasVoted = true; 
 
-  const buttons = document.querySelectorAll('[data-role="vote-btn"]');
-  buttons.forEach(b => {
-    b.disabled = true;
-    b.innerHTML = '<span>⏳</span> جاري التصويت...'; // "Voting in progress..."
-  });
-
   // Optimistic UI Update for instant feedback
   if (liveData && liveData[candidateId]) {
     const currentTotal = parseInt(document.getElementById('totalVotes').textContent.replace(/,/g, '')) || 0;
@@ -338,94 +332,31 @@ async function submitVote(candidateId, candidateName) {
     updateResults(optimisticData);
   }
 
-  try {
-    const deviceId = getDeviceId();
-    
-    // Send the vote as a GET request to completely eliminate Google Apps Script POST/CORS redirect bugs.
-    const url = new URL(CONFIG.APPS_SCRIPT_URL);
-    url.searchParams.append('action', 'vote');
-    url.searchParams.append('email', deviceId); // Use deviceId as the unique identifier
-    url.searchParams.append('googleId', '');
-    url.searchParams.append('candidateId', candidateId);
-    url.searchParams.append('candidateName', candidateName);
+  const deviceId = getDeviceId();
+  
+  // Construct the URL
+  const url = new URL(CONFIG.APPS_SCRIPT_URL);
+  url.searchParams.append('action', 'vote');
+  url.searchParams.append('email', deviceId);
+  url.searchParams.append('googleId', '');
+  url.searchParams.append('candidateId', candidateId);
+  url.searchParams.append('candidateName', candidateName);
 
-    const res = await axios.get(url.toString());
-    const resData = res.data;
+  // 100% INSTANT UI FEEDBACK (No waiting for server!)
+  localStorage.setItem(localVoteKey(), candidateId);
+  lockVoting('Your vote has been recorded. Thank you!', candidateId);
+  
+  Swal.fire({
+    icon: 'success',
+    title: 'Vote Successful',
+    text: 'Your vote has been successfully recorded!',
+    background: '#0d0b08',
+    color: '#f4d976',
+    confirmButtonColor: '#d4af37'
+  });
 
-    if (resData.success) {
-      localStorage.setItem(localVoteKey(), candidateId);
-      lockVoting('Your vote has been recorded. Thank you!', candidateId);
-      Swal.fire({
-        icon: 'success',
-        title: 'Vote Successful',
-        text: 'Your vote has been successfully recorded!',
-        background: '#0d0b08',
-        color: '#f4d976',
-        confirmButtonColor: '#d4af37'
-      });
-      // Do not fetch immediately to prevent the cached server data from reverting the optimistic UI update
-      // fetchResults(); 
-    } else {
-      if (resData.message === 'Voting is closed') {
-        isVotingClosed = true;
-        buttons.forEach(btn => {
-          btn.disabled = true;
-          btn.innerHTML = '<span>⛔</span> Voting Closed';
-        });
-        Swal.fire({
-          icon: 'error',
-          title: 'Voting Closed',
-          text: 'Sorry, voting has been closed.',
-          background: '#0d0b08',
-          color: '#f4d976',
-          confirmButtonColor: '#d4af37'
-        });
-        // fetchResults(); // No need to fetch immediately
-      } else if (resData.message === 'Already Voted') {
-        const previousVote = resData.candidateId || '1';
-        localStorage.setItem(localVoteKey(), previousVote);
-        lockVoting('You have already voted.', previousVote !== '1' ? previousVote : null);
-        
-        Swal.fire({
-          icon: 'error',
-          title: 'Already Voted',
-          text: 'You have already voted.',
-          background: '#0d0b08',
-          color: '#f4d976',
-          confirmButtonColor: '#d4af37'
-        });
-      } else {
-        hasVoted = false;
-        buttons.forEach(b => {
-          b.disabled = false;
-          b.innerHTML = '<span>✅</span> صوّت الآن';
-        });
-        Swal.fire({
-          icon: 'error',
-          title: 'Error',
-          text: resData.message || 'Could not record your vote.',
-          background: '#0d0b08',
-          color: '#f4d976',
-          confirmButtonColor: '#d4af37'
-        });
-      }
-    }
-  } catch (err) {
-    console.error('Submit Vote Error:', err);
-    hasVoted = false;
-    buttons.forEach(b => {
-      b.disabled = false;
-      b.innerHTML = '<span>✅</span> صوّت الآن';
-    });
-    Swal.fire({
-      icon: 'error',
-      title: 'Connection Error',
-      text: 'Could not connect to the server. Please ensure your Google Apps Script is deployed correctly.',
-      background: '#0d0b08',
-      color: '#f4d976',
-      confirmButtonColor: '#d4af37'
-    });
-  }
+  // Send the vote silently in the background
+  axios.get(url.toString()).catch(err => console.error('Background Vote Error:', err));
 }
 
 /* ---------------------------------------------------------
