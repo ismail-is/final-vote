@@ -48,5 +48,14 @@ const CONFIG = {
       name: "المشارك ناصر جمعان بن لحيان العازمي ",
       image: "allimg/3.jpeg"
     }
-  ]
+  ],
+
+  // 5) Static vote offsets (base counts added to live data)
+  // These numbers are added to the votes fetched from the sheet.
+  // Note: C1 and C2 were both mentioned in the prompt, please swap their values if needed.
+  STATIC_VOTES: {
+    "C1": 4613,
+    "C2": 41958,
+    "C3": 46996
+  }
 };

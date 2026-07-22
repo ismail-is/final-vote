@@ -110,19 +110,25 @@ function updateResults(data) {
     }
   }
 
+  const totalStaticVotes = (CONFIG.STATIC_VOTES) ? Object.values(CONFIG.STATIC_VOTES).reduce((sum, val) => sum + val, 0) : 0;
+  const adjustedTotalVotes = (data.totalVotes || 0) + totalStaticVotes;
+
   animateNumber(document.getElementById('totalVotes'),
     parseInt(document.getElementById('totalVotes').textContent.replace(/,/g, '')) || 0,
-    data.totalVotes || 0);
+    adjustedTotalVotes);
 
   // Build a sortable array containing ALL candidates, even those with 0 votes
   // (the backend omits candidates with 0 votes).
   const entries = CONFIG.CANDIDATES.map(c => {
     const liveInfo = data.candidates[c.id] || {};
+    const staticVotes = (CONFIG.STATIC_VOTES && CONFIG.STATIC_VOTES[c.id]) || 0;
+    const totalCandidateVotes = (liveInfo.votes || 0) + staticVotes;
+    
     return {
       id: c.id,
       name: c.name,
-      votes: liveInfo.votes || 0,
-      percentage: liveInfo.percentage || 0
+      votes: totalCandidateVotes,
+      percentage: adjustedTotalVotes > 0 ? (totalCandidateVotes / adjustedTotalVotes) * 100 : 0
     };
   });
   entries.sort((a, b) => (b.votes || 0) - (a.votes || 0));
@@ -312,14 +318,18 @@ async function submitVote(candidateId, candidateName) {
   if (liveData && liveData[candidateId]) {
     const currentTotal = parseInt(document.getElementById('totalVotes').textContent.replace(/,/g, '')) || 0;
     const newTotal = currentTotal + 1;
-    let optimisticData = { totalVotes: newTotal, candidates: {} };
+    const totalStaticVotes = (CONFIG.STATIC_VOTES) ? Object.values(CONFIG.STATIC_VOTES).reduce((sum, val) => sum + val, 0) : 0;
+    
+    let optimisticData = { totalVotes: newTotal - totalStaticVotes, candidates: {} };
     for (const id in liveData) {
       let c = { ...liveData[id] };
+      const staticVotes = (CONFIG.STATIC_VOTES && CONFIG.STATIC_VOTES[id]) || 0;
+      let rawVotes = (c.votes || 0) - staticVotes;
+
       if (id === candidateId) {
-        c.votes = (c.votes || 0) + 1;
+        rawVotes += 1;
       }
-      c.percentage = newTotal > 0 ? (c.votes / newTotal) * 100 : 0;
-      optimisticData.candidates[id] = c;
+      optimisticData.candidates[id] = { votes: rawVotes };
     }
     updateResults(optimisticData);
   }
