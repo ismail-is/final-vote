@@ -24,7 +24,7 @@ const CONFIG = {
   // 2) Paste the URL you get after deploying the Apps Script as a
   //    Web App (Deploy > New deployment > Web app). It looks like:
   //    https://script.google.com/macros/s/XXXXXXXXXXXX/exec
-  APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbw9KQ3b2QA3mK72FA30nLnYT9SXKUIZTCjM-69wCgprJqNNXC5xfr_fFhjFyhHNMki6Rw/exec",
+  APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbwK5QW1u3-Ujk7ZjKinXzs6i46ONIsJYg7xCJLM7bg622n2kB9UCZTA-IjHq3_O6OfPZw/exec",
 
   // 3) How often (ms) the live results are refreshed.
   // Increased to 15 seconds to support up to 10k concurrent users smoothly

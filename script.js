@@ -41,7 +41,7 @@ function buildCardHTML(candidate, rankIndex) {
 
       <p class="text-gray-400 text-sm mb-1">Votes</p>
       <p class="text-2xl font-black gold-text mb-3">
-        <span data-role="votes">0</span>
+        <span data-role="votes">${((typeof CONFIG !== 'undefined' && CONFIG.STATIC_VOTES && CONFIG.STATIC_VOTES[candidate.id]) || 0).toLocaleString('en-US')}</span>
       </p>
 
       <div class="progress-track mb-1">
@@ -60,6 +60,14 @@ function buildCardHTML(candidate, rankIndex) {
 
 function renderInitialCards() {
   grid.innerHTML = CONFIG.CANDIDATES.map((c, i) => buildCardHTML(c, i)).join('');
+  
+  if (typeof CONFIG !== 'undefined' && CONFIG.STATIC_VOTES) {
+    const totalStaticVotes = Object.values(CONFIG.STATIC_VOTES).reduce((sum, val) => sum + val, 0);
+    const totalVotesEl = document.getElementById('totalVotes');
+    if (totalVotesEl) {
+      totalVotesEl.textContent = totalStaticVotes.toLocaleString('en-US');
+    }
+  }
 }
 
 /* ---------------------------------------------------------
@@ -110,25 +118,19 @@ function updateResults(data) {
     }
   }
 
-  const totalStaticVotes = (CONFIG.STATIC_VOTES) ? Object.values(CONFIG.STATIC_VOTES).reduce((sum, val) => sum + val, 0) : 0;
-  const adjustedTotalVotes = (data.totalVotes || 0) + totalStaticVotes;
-
   animateNumber(document.getElementById('totalVotes'),
     parseInt(document.getElementById('totalVotes').textContent.replace(/,/g, '')) || 0,
-    adjustedTotalVotes);
+    data.totalVotes || 0);
 
   // Build a sortable array containing ALL candidates, even those with 0 votes
   // (the backend omits candidates with 0 votes).
   const entries = CONFIG.CANDIDATES.map(c => {
     const liveInfo = data.candidates[c.id] || {};
-    const staticVotes = (CONFIG.STATIC_VOTES && CONFIG.STATIC_VOTES[c.id]) || 0;
-    const totalCandidateVotes = (liveInfo.votes || 0) + staticVotes;
-    
     return {
       id: c.id,
       name: c.name,
-      votes: totalCandidateVotes,
-      percentage: adjustedTotalVotes > 0 ? (totalCandidateVotes / adjustedTotalVotes) * 100 : 0
+      votes: liveInfo.votes || 0,
+      percentage: liveInfo.percentage || 0
     };
   });
   entries.sort((a, b) => (b.votes || 0) - (a.votes || 0));
@@ -318,18 +320,14 @@ async function submitVote(candidateId, candidateName) {
   if (liveData && liveData[candidateId]) {
     const currentTotal = parseInt(document.getElementById('totalVotes').textContent.replace(/,/g, '')) || 0;
     const newTotal = currentTotal + 1;
-    const totalStaticVotes = (CONFIG.STATIC_VOTES) ? Object.values(CONFIG.STATIC_VOTES).reduce((sum, val) => sum + val, 0) : 0;
-    
-    let optimisticData = { totalVotes: newTotal - totalStaticVotes, candidates: {} };
+    let optimisticData = { totalVotes: newTotal, candidates: {} };
     for (const id in liveData) {
       let c = { ...liveData[id] };
-      const staticVotes = (CONFIG.STATIC_VOTES && CONFIG.STATIC_VOTES[id]) || 0;
-      let rawVotes = (c.votes || 0) - staticVotes;
-
       if (id === candidateId) {
-        rawVotes += 1;
+        c.votes = (c.votes || 0) + 1;
       }
-      optimisticData.candidates[id] = { votes: rawVotes };
+      c.percentage = newTotal > 0 ? (c.votes / newTotal) * 100 : 0;
+      optimisticData.candidates[id] = c;
     }
     updateResults(optimisticData);
   }
